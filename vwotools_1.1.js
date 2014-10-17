@@ -2,23 +2,45 @@
 // @name        VWO Report
 // @namespace   goodui
 // @include     http*://app.vwo.com*
-// @version     1.0
+// @version     1.1
 // @grant       none
 // ==/UserScript==
 
 //Code License: Public Domain
 
-function confidence(z) {
-	var pct = 0;
-	if(0.7 < z && z < 0.85) pct = 50;
-	if(0.85 <= z && z < 1.03) pct = 60;
-	if(1.03 <= z && z < 1.28) pct = 70;
-	if(1.28 <= z && z < 1.65) pct = 80;
-	if(1.65 <= z && z < 1.95) pct = 90;
-	if(1.95 <= z && z < 2.6) pct = 95;
-	if(2.6 <= z) pct = 99;
-	return pct;
+function significance_binary(aSuccess, aParticipants, bSuccess, bParticipants) {
+	var P = (aSuccess + bSuccess)/(aParticipants + bParticipants);
+	var Q = 1-P;
+	N = aParticipants+bParticipants;
+	var p = aSuccess/aParticipants;
+	var q = bSuccess/bParticipants;
+	z = (p-q) * Math.sqrt((N-1)/N) / Math.sqrt(P*Q*(1/aParticipants + 1/bParticipants));
+	if(z>0) {
+		return Math.ceil(normalAreaZtoPct(z)*100)/100;
+	} else {
+		return Math.ceil(100*(1-normalAreaZtoPct(Math.abs(z))))/100;
+	}
 }
+
+function normalDist(z) {
+	return Math.pow(Math.E,-Math.pow(z,2)/2)/Math.sqrt(2*Math.PI);
+}
+
+function normalAreaZtoPct(z) {
+	var z1=0, z2=0, y1, y2; // Starting at 0, center of Normal Curve
+	var width = 0.01, height;
+	var area = 0;
+	while(z2 < z) { // break area in bars and add up
+		y1 = normalDist(z1);
+		z2 = z1+width;
+		y2 = normalDist(z2);
+		height = (y1+y2)/2;
+		area += height * width;
+		z1=z2;
+	}
+	return Math.ceil(2*area*1000000)/1000000;
+}
+	
 
 function stError(p,n) {
 	return Math.sqrt(p*(1-p)/n);
@@ -28,18 +50,67 @@ function zNoOverlap(p, q, n, m) {
 	return 	(q - p)/(stError(p,n) + stError(q,m));
 }
 
+function elapsed(dateRangeString) {
+		var from = dateRangeString[0].split(", ");
+		var from_month = from[0].split(" ")[0];
+		var from_day = parseInt(from[0].split(" ")[1]);
+		var from_year = parseInt(from[1]);
+		var to = dateRangeString[1].split(", ");
+		var to_month = to[0].split(" ")[0];
+		var to_day = parseInt(to[0].split(" ")[1]);
+		var to_year = parseInt(to[1]);
+
+		function monthToNumber(month) {
+			switch(month) {
+				case "Jan" : return 1
+				break;
+				case "Feb" : return 2
+				break;
+				case "Mar" : return 3
+				break;
+				case "Apr" : return 4
+				break;
+				case "May" : return 5
+				break;
+				case "Jun" : return 6
+				break;
+				case "Jul" : return 7
+				break;
+				case "Aug" : return 8
+				break;
+				case "Sep" : return 9
+				break; 
+				case "Oct" : return 10
+				break;
+				case "Nov" : return 11
+				break;
+				case "Dec" : return 12
+				break;      
+			}
+		}
+
+		if(from_year == to_year) {
+			var weeks = ((monthToNumber(to_month) - monthToNumber(from_month))*30 - from_day + to_day)/7;
+			return weeks;
+		}
+}
+
 var table;
    var tbody;
      var rows = false; //some initial value for debug
 	 var rowCount; //number of variations
          var colCount;
+				 var rowCountActive;
 var goals = false;
 var abbaURL;
 var abbaHTML;
 var abbaLink;
 var initialized = false;
-var power = 1.037; //for 85% power
-var alpha = 1.96; //95% confidence
+var power = 1.037; //for 85% power, works well; for 80% power, use 0.842
+var alpha = 1.96; //99% confidence = 2.58; 95% = 1.96
+var time; // current elapsed time
+var elapsedWeeks;
+var trafficWeekly;
 
 var disableSampleSize = false; //workaround for VWO bug
 
@@ -59,6 +130,8 @@ function refreshTableReferences() {
 		  rowCount = rows.length;
 			isControlDisabled = false;
              colCount = tbody.children('tr').eq(0).children('td').length;
+    time = $(".date-range-picker__input > span > span").filter(":visible").text().split(" - ");
+		rowCountActive = rows.not(".table--data__disabled-row").length;
 }
 
 function initialize() { //on page load and refresh
@@ -66,29 +139,34 @@ function initialize() { //on page load and refresh
     //Refresh references
     refreshTableReferences();
     goals = $('.view--campaign').children('div').children('div').eq(1).children('ul'); //side menu
-    	
+	
+		//Test duration
+		elapsedWeeks = elapsed(time);
+		var totalSample = parseInt($(".row--result").children('td').eq(colCount - 2).text().replace(/,/g, '').split("/")[1]);
+		trafficWeekly = Math.floor(totalSample/elapsedWeeks);
+	
     //Link to ABBA
-    var abbaHTML = '<div class=\'abbalink\'><a href=\'http://www.thumbtack.com/labs/abba\' target=\'_blank\' id=\'abbaURL\'>View results in ABBA calculator</a> <br><br>View the <strong>p-value</strong>, adjust <strong>confidence level</strong>, and apply <strong>Bonferroni correction</strong></div>';
+	  rowCountActive = rows.not(".table--data__disabled-row").length;
+		var bonferroniMessage = (rowCountActive) > 2 ? '&#x2714; <strong>Bonferroni correction enabled</strong></div>' : '&#x2718; <strong>Bonferroni correction disabled</strong></div>';
+    var abbaHTML = '<div class=\'abbalink\'><a href=\'http://www.thumbtack.com/labs/abba\' target=\'_blank\' id=\'abbaURL\'>View results in ABBA calculator<br><smaller style="font-size: 9pt">' + bonferroniMessage + '</smaller></a>';
     abbaLink = $(abbaHTML);
-    abbaLink.appendTo(table.parent());  
-  
+    abbaLink.appendTo(table.parent());
 	  //False positive notice
-	  var rowCountActive = rows.not(".table--data__disabled-row").length;
 		var pFalse = Math.round((1 - Math.pow(0.95, rowCountActive-1))*100); // probability of at least one false positive
-		var pFalseText = rowCountActive + " variations = " + pFalse + "% chance of 1 or more false positives"	
-	  abbaLink.prepend("<div class='pfalsetext'>" + pFalseText + "</div>");
+		var falseriskText = "<strong>Risk of at least one false positive</strong>: " + pFalse + "%";
+	  abbaLink.prepend("<div class='vwo-stats'><div><strong>Number of comparisons</strong>: " + (rowCountActive-1) + "</div><div class='falserisk'>" + falseriskText + "</div><div><strong>Time elapsed</strong>: Less than " + Math.ceil(elapsedWeeks) + " weeks<br><strong>Weekly traffic</strong>: " + trafficWeekly + " visitors</div></div>");
 	
     //Floating goals
     goals.find('.separator').remove();
     goals.addClass("float-goals");
-	//Toggle floating the goal
-	var lock = $("<li class='goal-toggle' style='text-align: right; position: absolute; top: 3px; right: 3px; border: none !important'><img style='height: 14px; width: 14px' src='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAD1UlEQVR42s2VXWxTZRjH/+e0HbbburqqJKvBjyjeeY0kkhgSjToTAxfEjckgymDZFOKNFxpN5EqFGMH4cQHIVhQZFhn74mJGUPEj8WbGj2w4uq6dW9ex9nTnu339n54uIeLK6o22efK855z3PL/n/z7P+x4JFX5vvP7mplAo+JUkBFTNgGmZsCwDolAsPR8b+3ln7Pzp45ViSBWCNzN4f9eLHaVr4ZgowraKKNIruTxeeflVpOfSbYT0VgVg8B1rb7/j+POdO6DrGubSGViFAgq2DUPXoS6p0E0L9fW1OHzwCLKL2W5CjqwacLK3Tzz62CMINYaQSMwg/sckhgZGkJr+89tQqG7jhoc3oGldBKZuIjmdwsjg8NypvujaqgDPtG5Fej6D3375HWfPDJ089O6B1uXnj29+Ktq5b0+LgAzZI6Pn6AkQIFUNSCZTGB4YxXMdbTfM69q7T7Tvbsf4+ATOfharDtDTc0Zs374Fk/E4Bs+NouuFXTfM6+58SXTt34tLX1/G8LkB9MU+rQ6wrZWAqwkMXriM/Xu2/SNgd3cHLl78Bl8Oj/xPANGn7+u/e2Ok2S/bEGoeEjdVjQfw8C8XLIBtKhdteA0dHkuBMDV4uUGcOcLnxeKsfWn9aWyqBBAtMbaz9hNgqICigU3Pa6PsFWCJ97S8e63Q23xW2whsbsfMR++h6a2EtCLg4+Z7xbP9g0B2ioGuMFCKgRYAPccxgSp93vGK63UCDALq/EAwgNR3cUQ+sFYGnHjyLtF2PgpMjQO5NC1Dm2MwmsmMA7Vcj1sAv49Zr+HY56oD79X4ker9BJF30pUU3EMFAwx6tbwMzFhX3IwdFfksx4QqVJWnqdeogBYIAI1BKpiiAnO1CmZp82UFVGNQQW2glGlJQYBZr3EUmNUqYA0UKmAXlbIuKeBYKytYmnfBjoolmrHggsMNSH2fuEkNnlgn2mLHgPivwCILfI3Z5xyfZLewe8K3AQ20cKNrwSABDGFQiUQFh99G5FDyZgqGXAVaWYHjS8bslUVXQZZLprAW+cx1CkJI/TCNyIf2f67g7zVYVlCuQX65Bpl/UYPlLkpMuAFyC24HJceAos7uYSC/3/W3htk5XoJ5X6y6i5ydPMLl4RJNjALzV9ylsmxuNG4onkH8jFGVUX5bJpiHUR0BDfXcB5OIvF9hH0S3PiBaoq8BP1JFQXaPAYuHnKG5gBJEdQFCuC85jocgHtqCmc+/QNPB2ZUBB+7E0fsfDO8UlgqvLMFHhk8ugkNe81SVBLw0n2MeCfxaosaZwxr7PEWYmn1s/Snsuj7mX81qVjeUaMzhAAAAAElFTkSuQmCC'> Pin Goals</li>");
-	lock.appendTo(goals);
-	$(".goal-toggle").live("click", function() { goals.removeClass("float-goals"); $(".goal-toggle").remove(); });
+		//Toggle floating the goal
+		var lock = $("<li class='goal-toggle' style='text-align: right; position: absolute; top: 3px; right: 3px; border: none !important'><img style='height: 14px; width: 14px' src='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAD1UlEQVR42s2VXWxTZRjH/+e0HbbburqqJKvBjyjeeY0kkhgSjToTAxfEjckgymDZFOKNFxpN5EqFGMH4cQHIVhQZFhn74mJGUPEj8WbGj2w4uq6dW9ex9nTnu339n54uIeLK6o22efK855z3PL/n/z7P+x4JFX5vvP7mplAo+JUkBFTNgGmZsCwDolAsPR8b+3ln7Pzp45ViSBWCNzN4f9eLHaVr4ZgowraKKNIruTxeeflVpOfSbYT0VgVg8B1rb7/j+POdO6DrGubSGViFAgq2DUPXoS6p0E0L9fW1OHzwCLKL2W5CjqwacLK3Tzz62CMINYaQSMwg/sckhgZGkJr+89tQqG7jhoc3oGldBKZuIjmdwsjg8NypvujaqgDPtG5Fej6D3375HWfPDJ089O6B1uXnj29+Ktq5b0+LgAzZI6Pn6AkQIFUNSCZTGB4YxXMdbTfM69q7T7Tvbsf4+ATOfharDtDTc0Zs374Fk/E4Bs+NouuFXTfM6+58SXTt34tLX1/G8LkB9MU+rQ6wrZWAqwkMXriM/Xu2/SNgd3cHLl78Bl8Oj/xPANGn7+u/e2Ok2S/bEGoeEjdVjQfw8C8XLIBtKhdteA0dHkuBMDV4uUGcOcLnxeKsfWn9aWyqBBAtMbaz9hNgqICigU3Pa6PsFWCJ97S8e63Q23xW2whsbsfMR++h6a2EtCLg4+Z7xbP9g0B2ioGuMFCKgRYAPccxgSp93vGK63UCDALq/EAwgNR3cUQ+sFYGnHjyLtF2PgpMjQO5NC1Dm2MwmsmMA7Vcj1sAv49Zr+HY56oD79X4ker9BJF30pUU3EMFAwx6tbwMzFhX3IwdFfksx4QqVJWnqdeogBYIAI1BKpiiAnO1CmZp82UFVGNQQW2glGlJQYBZr3EUmNUqYA0UKmAXlbIuKeBYKytYmnfBjoolmrHggsMNSH2fuEkNnlgn2mLHgPivwCILfI3Z5xyfZLewe8K3AQ20cKNrwSABDGFQiUQFh99G5FDyZgqGXAVaWYHjS8bslUVXQZZLprAW+cx1CkJI/TCNyIf2f67g7zVYVlCuQX65Bpl/UYPlLkpMuAFyC24HJceAos7uYSC/3/W3htk5XoJ5X6y6i5ydPMLl4RJNjALzV9ylsmxuNG4onkH8jFGVUX5bJpiHUR0BDfXcB5OIvF9hH0S3PiBaoq8BP1JFQXaPAYuHnKG5gBJEdQFCuC85jocgHtqCmc+/QNPB2ZUBB+7E0fsfDO8UlgqvLMFHhk8ugkNe81SVBLw0n2MeCfxaosaZwxr7PEWYmn1s/Snsuj7mX81qVjeUaMzhAAAAAElFTkSuQmCC'> Pin Goals</li>");
+		lock.appendTo(goals);
+		$(".goal-toggle").live("click", function() { goals.removeClass("float-goals"); $(".goal-toggle").remove(); });
   
     //Other styling
     if(!initialized) {  //Do the first time
-			var stylesReport = '<style>#js-help-tooltip { z-index: 1000; } .confidence { font-size: 18px; letter-spacing: -3px; position: relative; } .confidence small { margin-left: 5px; font-size: 9pt; letter-spacing: 0px; } .confidence:hover:before { font-size: 10pt; padding: 10px; letter-spacing: 0px; position: absolute; width: 200px; top: -10px; left: -210px; color: white; content: attr(data-title); } .confidence.grey:hover:before { background: #999 !important; } .confidence.red:hover:before { background: #E30000 !important; } .confidence.orange:hover:before { background: orange; } .confidence.green:hover:before { background: green; } .pfalsetext { width: 350px; font-size: 9pt; position: absolute; top: 0; left: 0; padding-left:10px; text-align: left; color: #EB5055; } .ticket-panel { z-index: 999; } .table--data .samplesize { position: relative; font-size: 22px; font-weight: 700; cursor: default } .table--data .samplesize.grey:hover:before { background: #999 !important; } .table--data .samplesize.red:hover:before { background: #E30000 !important; } .table--data .samplesize.orange:hover:before { background: orange; } .table--data .samplesize.green:hover:before { background: green; } .table--data .samplesize:hover:before { font-weight: 400; font-size: 10pt; content: attr(data-title); position: absolute; z-index: 999; left: -210px; top: -20px; width: 300px; border: 1px #444; padding: 10px; color:white } .abbalink { text-align: center; position: relative; } .abbalink a { display: inline-block; background: #3892e3; color: white; padding: 5px 15px; border-radius: 0 0 10px 10px; -moz-border-radius: 0 0 10px 10px; -web-kit-border-radius: 0 0 10px 10px; } </style>';         
+			var stylesReport = '<style>#js-help-tooltip { z-index: 1000; } .confidence { font-size: 18px; letter-spacing: -3px; position: relative; } .confidence small { margin-left: 5px; font-size: 9pt; letter-spacing: 0px; } .confidence:hover:before { font-size: 10pt; padding: 10px; letter-spacing: 0px; position: absolute; width: 200px; top: -10px; left: -210px; color: white; content: attr(data-title); } .confidence.grey:hover:before { background: #999 !important; } .confidence.red:hover:before { background: #E30000 !important; } .confidence.orange:hover:before { background: orange; } .confidence.green:hover:before { background: green; } .vwo-stats { width: 350px; font-size: 10pt; line-height: 12pt; position: absolute; top: 10px; left: 0; padding-left:10px; text-align: left; } .falserisk { display: block; color: #EB5055; } .ticket-panel { z-index: 999; } .table--data .samplesize { position: relative; font-size: 22px; font-weight: 700; cursor: default } .table--data .samplesize.grey:hover:before { background: #999 !important; } .table--data .samplesize.red:hover:before { background: #E30000 !important; } .table--data .samplesize.orange:hover:before { background: orange; } .table--data .samplesize.green:hover:before { background: green; } .table--data .samplesize:hover:before { font-weight: 400; font-size: 10pt; content: attr(data-title); position: absolute; z-index: 999; left: -210px; top: -20px; width: 300px; border: 1px #444; padding: 10px; color:white } .abbalink { text-align: center; position: relative; } .abbalink a { display: inline-block; background: #3892e3; color: white; padding: 5px 15px; border-radius: 0 0 10px 10px; -moz-border-radius: 0 0 10px 10px; -web-kit-border-radius: 0 0 10px 10px; } </style>';         
 			$(document.body).append(stylesReport);
     }
   
@@ -132,9 +210,10 @@ function waitForSummary() {
 function modifyTable() {
 	abbaURL = '';
 	var conversionStringControl = rows.filter(".cell-variation-base").children('td').eq(colCount - 2).text().replace(/,/g, '').split("/");
-	var successControl = conversionStringControl[0];
-	var visitorsControl = conversionStringControl[1];
+	var successControl = parseInt(conversionStringControl[0].replace(/\D/g, ''));
+	var visitorsControl = parseInt(conversionStringControl[1].replace(/\D/g, ''));
 	var pControl = successControl/visitorsControl;
+	
 	rows.each(function () {
 		var row = $(this);
 		var isControl = row.hasClass("cell-variation-base");
@@ -150,28 +229,29 @@ function modifyTable() {
 			
 			//Insert confidence
 			var z = zNoOverlap(pControl, pVariation, visitorsControl, visitors);
-			var confidenceLevel = confidence(Math.abs(z));
+			var confidenceLevel = Math.floor(normalAreaZtoPct(Math.abs(z)) * 100);
 			var chanceToBeat;
-			if(visitors < 10 || success < 10) {
+			var p = significance_binary(success, visitors, successControl, visitorsControl);
+			
+			if(visitors < 10 || success < 10 || visitors-success < 10 || successControl < 10 || visitorsControl-successControl < 10) {
 				chanceToBeat = "<span class='confidence' style='color: grey'><small>Not enough data</small></span>";
 			} else {
-				switch(confidenceLevel) {
-					case 0 : chanceToBeat = "<span data-title='Not statistically significant' class='confidence red' style='color: red'>&#9898;&#9898;&#9898;&#9898;&#9898; <small>&lt;50%</small></span>";
-					break;
-					case 50 : chanceToBeat = "<span data-title='Not statistically significant' class='confidence red' style='color: red'>&#9899;&#9898;&#9898;&#9898;&#9898; <small>50%+</small></span>";
-					break;					
-					case 60 : chanceToBeat = "<span data-title='Early indication. Not statistically significant.' class='confidence orange' style='color: orange'>&#9899;&#9899;&#9898;&#9898;&#9898; <small>60%+</small></span>";
-					break;					
-					case 70 : chanceToBeat = "<span data-title='Weak. Not statistically significant.' class='confidence orange' style='color: orange'>&#9899;&#9899;&#9898;&#9898;&#9898; <small>70%+</small></span>";
-					break;					
-					case 80 : chanceToBeat = "<span data-title='Sufficient. No overlap between 80% Confidence Intervals. Likely statistically significant at 0.05 level.' class='confidence green' style='color: green'>&#9899;&#9899;&#9899;&#9898;&#9898; <small>80%+</small></span>";
-					break;					
-					case 90 : chanceToBeat = "<span data-title='Strong. No overlap between 90% Confidence Intervals' class='confidence green' style='color: green'>&#9899;&#9899;&#9899;&#9899;&#9898; <small>90%+</small></span>";
-					break;					
-					case 95 : chanceToBeat = "<span data-title='Very strong. No overlap between 95% Confidence Intervals' class='confidence green' style='color: green'>&#9899;&#9899;&#9899;&#9899;&#9681; <small>95%+</small></span>";
-					break;					
-					case 99 : chanceToBeat = "<span data-title='Near certain. No overlap between 99% Confidence Intervals' class='confidence green' style='color: green'>&#9899;&#9899;&#9899;&#9899;&#9899; <small>99%+</span>";
-					break;					
+				if(confidenceLevel<50) {
+					chanceToBeat = "<span data-title='Not statistically significant. p-value about " + p + "' class='confidence red' style='color: red'>&#9898;&#9898;&#9898;&#9898;&#9898; <small>" + confidenceLevel + "%</small></span>";
+				} else if(confidenceLevel<60) {
+					chanceToBeat = "<span data-title='Not statistically significant. p-value: " +  p + "' class='confidence red' style='color: red'>&#9899;&#9898;&#9898;&#9898;&#9898; <small>" + confidenceLevel + "%</small></span>";
+				} else if(confidenceLevel<70) {
+					chanceToBeat = "<span data-title='Early indication. Not statistically significant. p-value: " +  p + "' class='confidence orange' style='color: orange'>&#9899;&#9899;&#9898;&#9898;&#9898; <small>" + confidenceLevel + "%</small></span>";
+				} else if(confidenceLevel<80) {
+					chanceToBeat = "<span data-title='Weak. Not statistically significant. p-value: " + p + "' class='confidence orange' style='color: orange'>&#9899;&#9899;&#9898;&#9898;&#9898; <small>" + confidenceLevel + "%</small></span>";
+				} else if(confidenceLevel<90) {
+					chanceToBeat = "<span data-title='Sufficient. No overlap between " + confidenceLevel + "% Confidence Intervals. p-value: " + p + "' class='confidence green' style='color: green'>&#9899;&#9899;&#9899;&#9898;&#9898; <small>" + confidenceLevel + "%</small></span>";
+				} else if(confidenceLevel<95) {
+					chanceToBeat = "<span data-title='Strong. No overlap between " + confidenceLevel + "% Confidence Intervals. p-value: " + p + "' class='confidence green' style='color: green'>&#9899;&#9899;&#9899;&#9899;&#9898; <small>" + confidenceLevel + "%</small></span>";
+				}	else if(confidenceLevel<99) {
+					chanceToBeat = "<span data-title='Very strong. No overlap between " + confidenceLevel + "% Confidence Intervals. p-value: " + p + "' class='confidence green' style='color: green'>&#9899;&#9899;&#9899;&#9899;&#9681; <small>" + confidenceLevel + "%</small></span>";
+				}	else {			
+					chanceToBeat = "<span data-title='Near certain. No overlap between " + confidenceLevel + "% Confidence Intervals. p-value: " + p + "' class='confidence green' style='color: green'>&#9899;&#9899;&#9899;&#9899;&#9899; <small>" + confidenceLevel + "%</span>";				
 				}	
 			}
 			colChanceToBeat.children("span").children("div").html(chanceToBeat);
@@ -183,13 +263,13 @@ function modifyTable() {
 			var samplesize = Math.floor(2 * Math.pow(zTotal, 2) * pControl * (1 - pControl) / Math.pow(minimumEffect, 2) + 0.5);
 			var samplesizeCurrentOfTotal = visitors / samplesize;
 			var samplesizeDifference = ((samplesize-visitors).toString()).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-
 			//Put together the sample estimate and rating
 			var samplesizeHTML;
-			var title = "If this " + pctEffect + "% effect is real, you might expect to confirm it with 95% confidence once you have " + samplesizeDifference + " more visitors. " + (samplesizeCurrentOfTotal < 0.5 ? " There is an up to 15% chance results will not be conclusive at 0.05 significance level." : " However, results may become less conclusive during this time.");
+			var title = "If this " + pctEffect + "% effect is real, you would expect to confirm it with 95% confidence if you had " + samplesizeDifference + " more visitors (" + Math.ceil(elapsedWeeks - Math.floor(elapsedWeeks) + (samplesize-visitors)/(trafficWeekly/rowCountActive)) + " weeks). " + (samplesizeCurrentOfTotal < 0.5 ? " There is an up to 15% chance results will not be conclusive at 0.05 significance level." : " However, results may become less conclusive during this time.");
 			if(visitors < 10 || success < 10) { samplesizeHTML = "<span data-title='Not enough data' class='samplesize grey' style='font-size: 16px; color: #ccc'>&#10008;</span>"; }
-			else if(samplesize <= visitors && (success < 100 || visitors < 300) && confidenceLevel < 80) { samplesizeHTML = "<span data-title='Likely insufficient sample. Run this variation until you have about 100 conversions and at least 300 visitors over at least 1 week to be more certain.' class='samplesize green' style='color: green'>&#9685;</style>"; }
-			else if(samplesize <= visitors) { samplesizeHTML = "<span data-title='This is likely an adequate sample size, assuming you have run this variation for 1-2 weeks.' class='samplesize green' style='color: green'>&#9899;</style>"; }
+			else if(samplesize <= visitors && (success < 100 || visitors < 300) && confidenceLevel < 80) { samplesizeHTML = "<span data-title='Likely insufficient sample. Run experiments until you have adequate visitors and at least 100 conversions" + (elapsedWeeks < 2 ? " for 1-2 weeks" : "") + ". The effect size may still be inflated.' class='samplesize green' style='color: green'>&#9685;</style>"; }
+			else if(samplesize <= visitors && (success < 100 || visitors < 300)) { samplesizeHTML = "<span data-title='This is a sufficient sample size to see that there is an effect, but the degree of effect may be inflated. " + (elapsedWeeks < 2 ? "Run this variation for 2 weeks or more to ensure it holds." : "") + " Get at the very least " + (100 - success) + " more conversions.' class='samplesize green' style='color: green'>&#9899;</style>"; }			
+			else if(samplesize <= visitors) { samplesizeHTML = "<span data-title='" + (elapsedWeeks < 1 ? "Run this for at least 1-2 weeks" : "This is likely an adequate sample size") + "' class='samplesize green' style='color: green'>&#9899;</style>"; }
 			else if(samplesize > 1 ) { samplesizeHTML = samplesizeCurrentOfTotal < 0.25 ? (samplesizeCurrentOfTotal > 0.05 ? "<span data-title='" + title + "' class='samplesize red' style='color: red'>&#9684;</span>" : "<span data-title='" + title + "' class='samplesize red' style='color:red; font-size: 16px'>&#10008;</span>") : (samplesizeCurrentOfTotal > 0.6 ? "<span data-title='" + title + "' class='samplesize green' style='color:green'>&#9685;</span>" : "<span data-title='" + title + "' class='samplesize orange' style='color:orange'>&#9681;</span>"); }
 			
 			//Insert sample estimate  
