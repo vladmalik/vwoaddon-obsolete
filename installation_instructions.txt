@@ -9,6 +9,7 @@ Firefox: Installation with Greesemonkey plugin
 3. Click "New User Script" option to open the "New User Script" Form
 4. Click "Use Script From Clipboard" button (or just hit OK and paste the script on the next page)
 5. IMPORTANT: Enable the script
+6. Go to your VWO dashboard (close it if it's already open)
 
 Chrome: Installation with Tampermonkey plugin
 ====================================================
@@ -19,3 +20,4 @@ Chrome: Installation with Tampermonkey plugin
 4. Paste the Better Analytics script
 5. IMPORTANT: In the header of the script, replace @include with @match
 6. Save
+7. Go to your VWO dashboard (close it if it's already open)
