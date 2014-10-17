@@ -2,7 +2,7 @@
 // @name        VWO Report
 // @namespace   goodui
 // @include     http*://app.vwo.com*
-// @version     1.1
+// @version     1.0
 // @grant       none
 // ==/UserScript==
 
@@ -142,7 +142,7 @@ function initialize() { //on page load and refresh
 	
 		//Test duration
 		elapsedWeeks = elapsed(time);
-		var totalSample = parseInt($(".row--result").children('td').eq(colCount - 2).text().replace(/,/g, '').split("/")[1]);
+		var totalSample = parseInt($(".row--result").children('td').eq(colCount - 4).text().replace(/,/g, '').split("/")[1]);
 		trafficWeekly = Math.floor(totalSample/elapsedWeeks);
 	
     //Link to ABBA
@@ -166,7 +166,7 @@ function initialize() { //on page load and refresh
   
     //Other styling
     if(!initialized) {  //Do the first time
-			var stylesReport = '<style>#js-help-tooltip { z-index: 1000; } .confidence { font-size: 18px; letter-spacing: -3px; position: relative; } .confidence small { margin-left: 5px; font-size: 9pt; letter-spacing: 0px; } .confidence:hover:before { font-size: 10pt; padding: 10px; letter-spacing: 0px; position: absolute; width: 200px; top: -10px; left: -210px; color: white; content: attr(data-title); } .confidence.grey:hover:before { background: #999 !important; } .confidence.red:hover:before { background: #E30000 !important; } .confidence.orange:hover:before { background: orange; } .confidence.green:hover:before { background: green; } .vwo-stats { width: 350px; font-size: 10pt; line-height: 12pt; position: absolute; top: 10px; left: 0; padding-left:10px; text-align: left; } .falserisk { display: block; color: #EB5055; } .ticket-panel { z-index: 999; } .table--data .samplesize { position: relative; font-size: 22px; font-weight: 700; cursor: default } .table--data .samplesize.grey:hover:before { background: #999 !important; } .table--data .samplesize.red:hover:before { background: #E30000 !important; } .table--data .samplesize.orange:hover:before { background: orange; } .table--data .samplesize.green:hover:before { background: green; } .table--data .samplesize:hover:before { font-weight: 400; font-size: 10pt; content: attr(data-title); position: absolute; z-index: 999; left: -210px; top: -20px; width: 300px; border: 1px #444; padding: 10px; color:white } .abbalink { text-align: center; position: relative; } .abbalink a { display: inline-block; background: #3892e3; color: white; padding: 5px 15px; border-radius: 0 0 10px 10px; -moz-border-radius: 0 0 10px 10px; -web-kit-border-radius: 0 0 10px 10px; } </style>';         
+			var stylesReport = '<style>#js-help-tooltip { z-index: 1000; } .confidence { font-size: 18px; letter-spacing: -3px; position: relative; } .confidence small { margin-left: 5px; font-size: 9pt; letter-spacing: 0px; } .confidence:hover:before { z-index: 999; font-size: 10pt; padding: 10px; letter-spacing: 0px; position: absolute; width: 200px; top: -10px; left: -210px; color: white; content: attr(data-title); } .confidence.grey:hover:before { background: #999 !important; } .confidence.red:hover:before { background: #E30000 !important; } .confidence.orange:hover:before { background: orange; } .confidence.green:hover:before { background: green; } .vwo-stats { width: 350px; font-size: 10pt; line-height: 12pt; position: absolute; top: 10px; left: 0; padding-left:10px; text-align: left; } .falserisk { display: block; color: #EB5055; } .ticket-panel { z-index: 999; } .table--data .samplesize { position: relative; font-size: 22px; font-weight: 700; cursor: default } .table--data .samplesize.grey:hover:before { background: #999 !important; } .table--data .samplesize.red:hover:before { background: #E30000 !important; } .table--data .samplesize.orange:hover:before { background: orange; } .table--data .samplesize.green:hover:before { background: green; } .table--data .samplesize:hover:before { font-weight: 400; font-size: 10pt; content: attr(data-title); position: absolute; z-index: 999; left: -210px; top: -20px; width: 300px; border: 1px #444; padding: 10px; color:white } .abbalink { text-align: center; position: relative; } .abbalink a { display: inline-block; background: #3892e3; color: white; padding: 5px 15px; border-radius: 0 0 10px 10px; -moz-border-radius: 0 0 10px 10px; -web-kit-border-radius: 0 0 10px 10px; } </style>';         
 			$(document.body).append(stylesReport);
     }
   
@@ -209,7 +209,7 @@ function waitForSummary() {
 
 function modifyTable() {
 	abbaURL = '';
-	var conversionStringControl = rows.filter(".cell-variation-base").children('td').eq(colCount - 2).text().replace(/,/g, '').split("/");
+	var conversionStringControl = rows.filter(".cell-variation-base").children('td').eq(colCount - 2).text().replace(/,/g, '').replace(/-/g, '').split("/");
 	var successControl = parseInt(conversionStringControl[0].replace(/\D/g, ''));
 	var visitorsControl = parseInt(conversionStringControl[1].replace(/\D/g, ''));
 	var pControl = successControl/visitorsControl;
@@ -220,7 +220,7 @@ function modifyTable() {
 		var cols = row.children('td');
 		  var colConversions = cols.eq(colCount - 2);
 				 var colSamplesize = colConversions.children('.samplesize');
-		  var colChanceToBeat = cols.eq(colCount - 3);
+		  var colChanceToBeat = cols.eq(colCount - 5);
 		var conversionString = cols.eq(colCount - 2).children('span').text().split('/');
 		var success = parseInt(conversionString[0].replace(/\D/g, ''));
 		var visitors = parseInt(conversionString[1].replace(/\D/g, ''));
@@ -254,7 +254,7 @@ function modifyTable() {
 					chanceToBeat = "<span data-title='Near certain. No overlap between " + confidenceLevel + "% Confidence Intervals. p-value: " + p + "' class='confidence green' style='color: green'>&#9899;&#9899;&#9899;&#9899;&#9899; <small>" + confidenceLevel + "%</span>";				
 				}	
 			}
-			colChanceToBeat.children("span").children("div").html(chanceToBeat);
+			colChanceToBeat.html(chanceToBeat);
 			
 			//Insert sample estimates
 			var pctEffect = Math.round(1000*(pVariation-pControl)/pControl)/10;
