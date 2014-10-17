@@ -27,10 +27,10 @@ function normalDist(z) {
 }
 
 function normalAreaZtoPct(z) {
-	var z1=0, z2=0, y1, y2; // Starting at 0, center of Normal Curve
+	var z1=0, z2=0, y1, y2;
 	var width = 0.01, height;
 	var area = 0;
-	while(z2 < z) { // break area in bars and add up
+	while(z2 < z) {
 		y1 = normalDist(z1);
 		z2 = z1+width;
 		y2 = normalDist(z2);
