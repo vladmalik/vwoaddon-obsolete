@@ -228,7 +228,7 @@ function waitForTable() {
 	addProgress();
 	var checkIfLoaded = setInterval(function() {  
 		if($(".table--data").length > 0 && $('.view--campaign').length > 0) {
-			$("body").trigger("tableLoaded");   
+			$("body").trigger("tableLoaded");
 			clearInterval(checkIfLoaded);
 		}
 	}, 2000);	
@@ -239,8 +239,9 @@ function waitForSummary() {
 	removeProgress();
 	addProgress();
 	var checkIfLoaded = setInterval(function() {
-		var bars = $(".bars");
-		if(bars.length > 0 && bars.eq(1).find("rect").eq(0).attr("height") > 0) {
+		if(getCurrentPage() != "summary") { removeProgress(); }
+		var bars = $("svg.graph").eq(0).find(".bars");
+		if(bars.eq(0).find("rect").eq(0).attr("height") > 0 || bars.eq(1).find("rect").eq(0).attr("height") > 0) {
 			$("body").trigger("summaryLoaded");
 			clearInterval(checkIfLoaded);
 		}
@@ -276,7 +277,7 @@ function modifyTable() {
 			var chanceToBeat;
 			var p = Math.floor((1- significance_binary(success, visitors, successControl, visitorsControl))*1000)/1000;
 			var confidenceVariation = interval_binary(success, visitors, 0.95);
-			var improvementMinimum = Math.floor(100*(pVariation > pControl ? ((confidenceVariation.lower - confidenceControl.upper)/confidenceControl.upper) : ((confidenceVariation.upper - confidenceControl.lower)/confidenceControl.lower)));			
+			var improvementMinimum = Math.floor(100*(pVariation > pControl ? ((confidenceVariation.lower - confidenceControl.upper)/confidenceControl.upper) : ((confidenceVariation.upper - confidenceControl.lower)/confidenceControl.lower)));
 			var improvementMaximum = Math.floor(100*(pVariation > pControl ? ((confidenceVariation.upper - confidenceControl.lower)/confidenceControl.lower) : ((confidenceVariation.lower - confidenceControl.upper)/confidenceControl.upper)));
 			
 			if(visitors < 10 || success < 10 || visitors-success < 10 || successControl < 10 || visitorsControl-successControl < 10) {
@@ -306,9 +307,13 @@ function modifyTable() {
 					}	
 				}	
 			}
-			colChanceToBeat.html(chanceToBeat);
-			colImprovement.find("span").html(improvementMinimum + "% to " + improvementMaximum + "%");
 			
+			colChanceToBeat.html(chanceToBeat);
+			if(visitors != 0 && visitorsControl !=0) {
+				if(improvementMinimum < improvementMaximum)	colImprovement.find("span").html((improvementMinimum < 0 ? "<span style='color: red; font-weight: bold'>" + improvementMinimum + "%</span>" : "<span style='color: green; font-weight: bold'>" + improvementMinimum + "%</span>") + " to " + (improvementMaximum < 0 ? "<span style='color: red; font-weight: bold'>" + improvementMaximum + "%</span>" : "<span style='color: green; font-weight: bold'>" + improvementMaximum + "%</span>"));
+				else colImprovement.find("span").html((improvementMaximum < 0 ? "<span style='color: red; font-weight: bold'>" + improvementMaximum + "%</span>" : "<span style='color: green; font-weight: bold'>" + improvementMaximum + "%</span>") + " to " + (improvementMinimum < 0 ? "<span style='color: red; font-weight: bold'>" + improvementMinimum + "%</span>" : "<span style='color: green; font-weight: bold'>" + improvementMinimum + "%</span>"));
+			}
+				
 			//Insert sample estimates
 			var pctEffect = Math.round(1000*(pVariation-pControl)/pControl)/10;
 			var minimumEffect = pControl - pVariation;
@@ -346,7 +351,7 @@ function modifyTable() {
 document.body.onload = function() {
 
 	//General changes
-	var stylesGeneral = "<style>.summary-message { font-size: 16px; padding: 10px 30px; background: white; border: 1px solid #ddd; position:absolute; top:60px; left: 35%; color: red } .float-goals { background : none repeat scroll 0 0 #e7eaef; position: fixed; border-bottom: 1px solid #ddd; z-index: 999; opacity : 0.9; } [title='Show details of Sample report'] { display: none !important } .side-panel-filter h5 { color: #888 !important } .test-tile h4 { color: #3892E3 !important } #js-side-panel .icon--multivariate-test, #js-side-panel .icon--ab-test, #js-side-panel .icon--split-test, #js-side-panel .icon--conversion-test, .test-tile .icon--ab-test, .test-tile .icon--split-test, .test-tile .icon--conversion-test, .test-tile .icon--multivariate-test { background-size: 30px 30px !important; font-size: 30px !important; height: 30px !important; width: 30px !important; } .campaign-list-item .cf.push--bottom { margin-bottom: 10px !important } .panel__link { padding: 10px 40px } .campaign-list-item h4 { font-size: 15px !important; color: #3892E3 !important } .test-tile {padding: 10px !important; } .stat-group { margin-top: 3px !important } .test-tile__notification--information { display: none  !important} .test-tile .stat__value {font-size: 13px !important} </style>";
+	var stylesGeneral = "<style>.summary-message { font-size: 16px; padding: 10px 30px; background: rgba(255,255,255, 0.8); border: 1px solid #ddd; position:absolute; top:-57px; right: 5px; color: red } .float-goals { background : none repeat scroll 0 0 #e7eaef; position: fixed; border-bottom: 1px solid #ddd; z-index: 999; opacity : 0.9; } [title='Show details of Sample report'] { display: none !important } .side-panel-filter h5 { color: #888 !important } .test-tile h4 { color: #3892E3 !important } #js-side-panel .icon--multivariate-test, #js-side-panel .icon--ab-test, #js-side-panel .icon--split-test, #js-side-panel .icon--conversion-test, .test-tile .icon--ab-test, .test-tile .icon--split-test, .test-tile .icon--conversion-test, .test-tile .icon--multivariate-test { background-size: 30px 30px !important; font-size: 30px !important; height: 30px !important; width: 30px !important; } .campaign-list-item .cf.push--bottom { margin-bottom: 10px !important } .panel__link { padding: 10px 40px } .campaign-list-item h4 { font-size: 15px !important; color: #3892E3 !important } .test-tile {padding: 10px !important; } .stat-group { margin-top: 3px !important } .test-tile__notification--information { display: none  !important} .test-tile .stat__value {font-size: 13px !important} </style>";
 		$(document.body).append(stylesGeneral);
 	
 	//On first page load
@@ -361,84 +366,86 @@ document.body.onload = function() {
 		}   
 
 		function onSummaryLoaded() {
-			var bars = $(".view--campaign").find("svg").first().find(".bars");
+			var bars = $("svg.graph").eq(0).find(".bars");
 			var barsContainer = bars.parents(".graph-container").css("position", "relative").first();
 			var pBest=1;
 			setTimeout(function() {
-					var controlIsZero = false;
-					var guideY;
-					var successControl;
-					var visitorsControl;
-					bars.each(function(index) {
-						 var self = $(this);
-						 var bar = self.children().eq(0);
-						 var serializer = new XMLSerializer();
-						 var rate = (parseFloat((serializer.serializeToString(self.find(".bar-label")[0])).replace("%</text>", "").split(">")[1]))/100;  
-						 var visitors = parseInt((serializer.serializeToString(self.find(".bar-x-label")[0])).replace("</text>", "").split(">")[1].replace(",", ""));
-						 var success = Math.ceil(visitors * rate);
-						 var ratio = bar[0].getAttribute("height")/rate;
-						 var width = parseFloat(bar[0].getAttribute("width"));
-						 var x = parseFloat(bar[0].getAttribute("x")) + width/2; //middle point of bar
-						 var y = parseFloat(bar[0].getAttribute("y")); //top of bar
-						 var fill = bar[0].getAttribute("fill");
-						 var confidence = 1.96; //use 1.28 for 80%
-						 var margin = confidence * ratio * stError(rate, visitors); //length of error bar in pixels
-						 var barWidth = width/8;
-						 var path = document.createElementNS("http://www.w3.org/2000/svg", 'path');
-						 if(index == 0 && rate ==0) controlIsZero=true;
-						 if(index==0 || (index==1 && controlIsZero)) {
-							 	guideY = y - margin;
-								successControl = success;
-								visitorsControl = visitors;
-						 		path.setAttribute("d", "M " + (x-barWidth) + " " + (y-margin) + " L 2000 " + (y-margin) + "M " + x + " " + (y-margin) + " L " + x + " " + (y+margin) + " M " + (x-barWidth) + " " + (y+margin) + " L " + (x+barWidth) + " " + (y+margin) + " Z");					 		  
-						 		path.setAttribute("stroke-dasharray", "5,5");		
-						 		path.style.stroke = "#333";	
-								path.style.strokeWidth = "1px";
-							 	bar[0].setAttribute("fill", "#888");
-						 } else {
-								var p = Math.floor((1- significance_binary(success, visitors, successControl, visitorsControl))*100)/100;
-							  if(p < pBest) pBest = p;
-							 	if(guideY > y+margin) {
-									bar[0].setAttribute("fill", "#398F60");
-									var label = document.createElementNS("http://www.w3.org/2000/svg", 'text');
-									label.setAttribute("x", x + 35);
-									label.setAttribute("y", y);
-									label.style.fill = "green";
-									label.style.fontSize = "13px";
-									label.style.fontWeight = "700";
-									var significantText;
-									if(p == 0) {
-										significantText = document.createTextNode("p-value: <0.01");	
-									} else significantText = document.createTextNode("p-value: " + p);						
-									label.appendChild(significantText);
-									self[0].appendChild(label);
-								} else {
-									if(p > 0.09) {
-										bar[0].setAttribute("fill", "#888");
-									} else {
-										bar[0].setAttribute("fill", "#6A8F7B");
+					if(bars.length > 1) {
+						var controlIsZero = false;
+						var guideY;
+						var successControl;
+						var visitorsControl;
+						bars.each(function(index) {
+							 var self = $(this);
+							 var bar = self.children().eq(0);
+							 var serializer = new XMLSerializer();
+							 var rate = (parseFloat((serializer.serializeToString(self.find(".bar-label")[0])).replace("%</text>", "").split(">")[1]))/100;  
+							 var visitors = parseInt((serializer.serializeToString(self.find(".bar-x-label")[0])).replace("</text>", "").split(">")[1].replace(",", ""));
+							 var success = Math.ceil(visitors * rate);
+							 var ratio = bar[0].getAttribute("height")/rate;
+							 var width = parseFloat(bar[0].getAttribute("width"));
+							 var x = parseFloat(bar[0].getAttribute("x")) + width/2; //middle point of bar
+							 var y = parseFloat(bar[0].getAttribute("y")); //top of bar
+							 var fill = bar[0].getAttribute("fill");
+							 var confidence = 1.96; //use 1.28 for 80%
+							 var margin = confidence * ratio * stError(rate, visitors); //length of error bar in pixels
+							 var barWidth = width/8;
+							 var path = document.createElementNS("http://www.w3.org/2000/svg", 'path');
+							 if(index == 0 && rate ==0) controlIsZero=true;
+							 if(index==0 || (index==1 && controlIsZero)) {
+									guideY = y - margin;
+									successControl = success;
+									visitorsControl = visitors;
+									path.setAttribute("d", "M " + (x-barWidth) + " " + (y-margin) + " L 2000 " + (y-margin) + "M " + x + " " + (y-margin) + " L " + x + " " + (y+margin) + " M " + (x-barWidth) + " " + (y+margin) + " L " + (x+barWidth) + " " + (y+margin) + " Z");					 		  
+									path.setAttribute("stroke-dasharray", "5,5");		
+									path.style.stroke = "#333";	
+									path.style.strokeWidth = "1px";
+									bar[0].setAttribute("fill", "#888");
+							 } else {
+									var p = Math.floor((1- significance_binary(success, visitors, successControl, visitorsControl))*100)/100;
+									if(p < pBest) pBest = p;
+									if(guideY > y+margin) {
+										bar[0].setAttribute("fill", "#398F60");
 										var label = document.createElementNS("http://www.w3.org/2000/svg", 'text');
 										label.setAttribute("x", x + 35);
 										label.setAttribute("y", y);
 										label.style.fill = "green";
 										label.style.fontSize = "13px";
 										label.style.fontWeight = "700";
-										var significantText = document.createTextNode("p-value: " + p);						
+										var significantText;
+										if(p == 0) {
+											significantText = document.createTextNode("p-value: <0.01");	
+										} else significantText = document.createTextNode("p-value: " + p);						
 										label.appendChild(significantText);
-										self[0].appendChild(label);										
+										self[0].appendChild(label);
+									} else {
+										if(p > 0.09) {
+											bar[0].setAttribute("fill", "#888");
+										} else {
+											bar[0].setAttribute("fill", "#6A8F7B");
+											var label = document.createElementNS("http://www.w3.org/2000/svg", 'text');
+											label.setAttribute("x", x + 35);
+											label.setAttribute("y", y);
+											label.style.fill = "green";
+											label.style.fontSize = "13px";
+											label.style.fontWeight = "700";
+											var significantText = document.createTextNode("p-value: " + p);						
+											label.appendChild(significantText);
+											self[0].appendChild(label);										
+										}
 									}
-								}
-						 		path.setAttribute("d", "M " + (x-barWidth) + " " + (y-margin) + " L " + (x+barWidth) + " " + (y-margin) + "M " + x + " " + (y-margin) + " L " + x + " " + (y+margin) + " M " + (x-barWidth) + " " + (y+margin) + " L " + (x+barWidth) + " " + (y+margin) + " Z");							 						 
-						 }						
-						 path.style.stroke = "#bbb";
-						 path.style.strokeWidth = "2px";						
-						 self[0].appendChild(path);
-						
-					});
-				 	removeProgress();
-					if(pBest > 0.09) {
-							bars.parents("div").eq(0).append("<div class='summary-message'>There are no trustworthy results at this time.</div>");
-					}
+									path.setAttribute("d", "M " + (x-barWidth) + " " + (y-margin) + " L " + (x+barWidth) + " " + (y-margin) + "M " + x + " " + (y-margin) + " L " + x + " " + (y+margin) + " M " + (x-barWidth) + " " + (y+margin) + " L " + (x+barWidth) + " " + (y+margin) + " Z");							 						 
+							 }						
+							 path.style.stroke = "#bbb";
+							 path.style.strokeWidth = "2px";						
+							 self[0].appendChild(path);
+
+						});
+						removeProgress();
+						if(pBest > 0.09) {
+								bars.parents("div").eq(0).append("<div class='summary-message'>There are no trustworthy results at this time.</div>");
+						}		
+					}	else removeProgress();
 			}, 1250);
 		}
 	
@@ -464,22 +471,36 @@ document.body.onload = function() {
 					modifyTable();
 				}
 			});
+
+			//If user sorts by date
+			$(".angular-date-range-picker__apply").add(".graph-header button").click(function(){
+					addProgress();
+					setTimeout(function(){ 
+							rows = tbody.children('tr'); 
+							modifyTable(); 
+							removeProgress(); 
+					}, 1500);
+			});
 			
-			//If user sorts columns
+			//If user changes base variation, sorts columns, etc
 			table.undelegate("th", "click").delegate("th", "click", function () {
 				// workaround for VWO bug
 				killthis();
-			});
-			
-			//If user changes base variation, etc
+			});			
 			table.undelegate(".dropdown__menu", "click").delegate(".dropdown__menu", "click", function () {
 				// workaround for VWO bug  
 				killthis();
 			});
 		}
   
+		
+		$(".nav-main").delegate("a", "click", function(e) {
+			removeProgress();	
+		});
+	
 		//Track page transition
 		$(".main-wrap").delegate(".page-nav", "click", function(e) {
+			removeProgress();
 			var clickTargetParent = $(e.target).parents("li");
 			var clickTarget = clickTargetParent.children("a");
 			if(clickTarget.text() == "Detailed Report" && !clickTargetParent.hasClass("active")) {
@@ -499,8 +520,10 @@ document.body.onload = function() {
 		});
 		
 	  //When new report selected
-		$(".panel__link, .test-tile").live("mousedown", function(e) {
-				waitForSummary();
-			  $("body").die("summaryLoaded").live("summaryLoaded", function() { onSummaryLoaded(); });
+		$(".panel__link, .test-tile").live("click", function(e) {
+			  if(e.which == 1) {
+					waitForSummary();
+					$("body").die("summaryLoaded").live("summaryLoaded", function() { onSummaryLoaded(); });
+				}
 		});
 }
