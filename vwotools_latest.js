@@ -2,7 +2,7 @@
 // @name        VWO Report
 // @namespace   goodui
 // @include     http*://app.vwo.com*
-// @version     1.1
+// @version     1.1.1
 // @grant       none
 // ==/UserScript==
 
