@@ -15,11 +15,11 @@ function significance_binary(aSuccess, aParticipants, bSuccess, bParticipants) {
 	var p = aSuccess/aParticipants;
 	var q = bSuccess/bParticipants;
 	z = (p-q) * Math.sqrt((N-1)/N) / Math.sqrt(P*Q*(1/aParticipants + 1/bParticipants));
-	if(z>0) {
-		return Math.ceil(normalAreaZtoPct(z)*100)/100;
-	} else {
-		return Math.ceil(100*(1-normalAreaZtoPct(Math.abs(z))))/100;
-	}
+
+
+
+	return normalAreaZtoPct(Math.abs(z));
+
 }
 
 function interval_binary(success, participants, confidencePct) {
@@ -198,7 +198,7 @@ function initialize() { //on page load and refresh
   
     //Clarify table labels
     var thead = table.children('thead').children('tr').children('th');
-    thead.eq(1).append('<br><strong title="80% Confidence. After correction for multiple comparisons, true confidence is lower" style="font-size: 80%; color:green">80% Confidence Range</strong>');
+    thead.eq(1).append('<br><strong title="80% Confidence. After correction for multiple comparisons, true confidence is lower" style="font-size: 80%; color:green">&lt; 75% Confidence Range</strong>');
 	thead.eq(3).append('<br><strong style="font-size: 80%; color:green" title="Margin of error with 95% Confidence">95% Confidence Range</strong>');
     thead.eq(9).append('<br><strong style="font-size: 80%; color:green" title="The sample size that would be required to detect this effect about 85% of the time" style="font-size: 80%; color:green">Sample Size Guide</strong>');
 		var colConfidence = thead.eq(5).children("a").contents();
@@ -310,8 +310,8 @@ function modifyTable() {
 			
 			colChanceToBeat.html(chanceToBeat);
 			if(visitors != 0 && visitorsControl !=0) {
-				if(improvementMinimum < improvementMaximum)	colImprovement.find("span").html((improvementMinimum < 0 ? "<span style='color: red; font-weight: bold'>" + improvementMinimum + "%</span>" : "<span style='color: green; font-weight: bold'>" + improvementMinimum + "%</span>") + " to " + (improvementMaximum < 0 ? "<span style='color: red; font-weight: bold'>" + improvementMaximum + "%</span>" : "<span style='color: green; font-weight: bold'>" + improvementMaximum + "%</span>"));
-				else colImprovement.find("span").html((improvementMaximum < 0 ? "<span style='color: red; font-weight: bold'>" + improvementMaximum + "%</span>" : "<span style='color: green; font-weight: bold'>" + improvementMaximum + "%</span>") + " to " + (improvementMinimum < 0 ? "<span style='color: red; font-weight: bold'>" + improvementMinimum + "%</span>" : "<span style='color: green; font-weight: bold'>" + improvementMinimum + "%</span>"));
+				if(improvementMinimum < improvementMaximum)	colImprovement.find("span").html((improvementMinimum < 0 ? "<span style='color: red; font-weight: bold'>" + improvementMinimum + "</span>" : "<span style='color: green; font-weight: bold'>" + improvementMinimum + "</span>") + " to " + (improvementMaximum < 0 ? "<span style='color: red; font-weight: bold'>" + improvementMaximum + "</span>" : "<span style='color: green; font-weight: bold'>" + improvementMaximum + "</span>") + "<span style='color: #666'>%</span>");
+				else colImprovement.find("span").html((improvementMaximum < 0 ? "<span style='color: red; font-weight: bold'>" + improvementMaximum + "</span>" : "<span style='color: green; font-weight: bold'>" + improvementMaximum + "</span>") + " to " + (improvementMinimum < 0 ? "<span style='color: red; font-weight: bold'>" + improvementMinimum + "</span>" : "<span style='color: green; font-weight: bold'>" + improvementMinimum + "</span>") + "<span style='color: #666'>%</span>");
 			}
 				
 			//Insert sample estimates
@@ -405,23 +405,25 @@ document.body.onload = function() {
 									var p = Math.floor((1- significance_binary(success, visitors, successControl, visitorsControl))*100)/100;
 									if(p < pBest) pBest = p;
 									if(guideY > y+margin) {
-										bar[0].setAttribute("fill", "#398F60");
+
 										var label = document.createElementNS("http://www.w3.org/2000/svg", 'text');
 										label.setAttribute("x", x + 35);
 										label.setAttribute("y", y);
 										label.style.fill = "green";
+										bar[0].setAttribute("fill", "#398F60");
 										label.style.fontSize = "13px";
 										label.style.fontWeight = "700";
 										var significantText;
 										if(p == 0) {
-											significantText = document.createTextNode("p-value: <0.01");	
-										} else significantText = document.createTextNode("p-value: " + p);						
+											significantText = document.createTextNode("p < 0.01");	
+										} else significantText = document.createTextNode("p = " + p);						
 										label.appendChild(significantText);
 										self[0].appendChild(label);
 									} else {
-										if(p > 0.09) {
-											bar[0].setAttribute("fill", "#888");
-										} else {
+
+
+
+										if(p < 0.1 && guideY > y-margin) {
 											bar[0].setAttribute("fill", "#6A8F7B");
 											var label = document.createElementNS("http://www.w3.org/2000/svg", 'text');
 											label.setAttribute("x", x + 35);
@@ -429,10 +431,13 @@ document.body.onload = function() {
 											label.style.fill = "green";
 											label.style.fontSize = "13px";
 											label.style.fontWeight = "700";
-											var significantText = document.createTextNode("p-value: " + p);						
+											var significantText = document.createTextNode("p = " + p);						
 											label.appendChild(significantText);
 											self[0].appendChild(label);										
-										}
+
+										} else {
+											bar[0].setAttribute("fill", "#888");
+										} 
 									}
 									path.setAttribute("d", "M " + (x-barWidth) + " " + (y-margin) + " L " + (x+barWidth) + " " + (y-margin) + "M " + x + " " + (y-margin) + " L " + x + " " + (y+margin) + " M " + (x-barWidth) + " " + (y+margin) + " L " + (x+barWidth) + " " + (y+margin) + " Z");							 						 
 							 }						
