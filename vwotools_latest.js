@@ -2,11 +2,11 @@
 // @name        VWO Report
 // @namespace   goodui
 // @include     http*://app.vwo.com*
-// @version     1.1.1
+// @version     1.1.2
 // @grant       none
 // ==/UserScript==
 
-//Code License: Public Domain
+//Code License: GPL 2
 
 function significance_binary(aSuccess, aParticipants, bSuccess, bParticipants) {
 	var P = (aSuccess + bSuccess)/(aParticipants + bParticipants);
@@ -15,11 +15,7 @@ function significance_binary(aSuccess, aParticipants, bSuccess, bParticipants) {
 	var p = aSuccess/aParticipants;
 	var q = bSuccess/bParticipants;
 	z = (p-q) * Math.sqrt((N-1)/N) / Math.sqrt(P*Q*(1/aParticipants + 1/bParticipants));
-
-
-
 	return normalAreaZtoPct(Math.abs(z));
-
 }
 
 function interval_binary(success, participants, confidencePct) {
@@ -132,8 +128,8 @@ var abbaURL;
 var abbaHTML;
 var abbaLink;
 var initialized = false;
-var power = 1.037; //for 85% power, works well; for 80% power, use 0.842
-var alpha = 1.96; //99% confidence = 2.58; 95% = 1.96
+var power = 1.037;
+var alpha = 1.96;
 var time; // current elapsed time
 var elapsedWeeks;
 var trafficWeekly;
@@ -405,7 +401,6 @@ document.body.onload = function() {
 									var p = Math.floor((1- significance_binary(success, visitors, successControl, visitorsControl))*100)/100;
 									if(p < pBest) pBest = p;
 									if(guideY > y+margin) {
-
 										var label = document.createElementNS("http://www.w3.org/2000/svg", 'text');
 										label.setAttribute("x", x + 35);
 										label.setAttribute("y", y);
@@ -420,9 +415,6 @@ document.body.onload = function() {
 										label.appendChild(significantText);
 										self[0].appendChild(label);
 									} else {
-
-
-
 										if(p < 0.1 && guideY > y-margin) {
 											bar[0].setAttribute("fill", "#6A8F7B");
 											var label = document.createElementNS("http://www.w3.org/2000/svg", 'text');
@@ -434,7 +426,6 @@ document.body.onload = function() {
 											var significantText = document.createTextNode("p = " + p);						
 											label.appendChild(significantText);
 											self[0].appendChild(label);										
-
 										} else {
 											bar[0].setAttribute("fill", "#888");
 										} 
