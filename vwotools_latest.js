@@ -2,7 +2,7 @@
 // @name        VWO Report
 // @namespace   goodui
 // @include     http*://app.vwo.com*
-// @version     1.1.3
+// @version     1.1.3.1
 // @grant       none
 // ==/UserScript==
 
@@ -364,7 +364,7 @@ function modifyTable() {
 document.body.onload = function() {
 
 	//General changes
-	var stylesGeneral = "<style>.summary-message { font-size: 16px; padding: 10px 30px; background: rgba(255,255,255, 0.8); border: 1px solid #ddd; position:absolute; top:-57px; right: 5px; color: red } .float-goals { background : none repeat scroll 0 0 #e7eaef; position: fixed; border-bottom: 1px solid #ddd; z-index: 999; opacity : 0.9; } [title='Show details of Sample report'] { display: none !important } .side-panel-filter h5 { color: #888 !important } .test-tile h4 { color: #3892E3 !important } #js-side-panel .icon--multivariate-test, #js-side-panel .icon--ab-test, #js-side-panel .icon--split-test, #js-side-panel .icon--conversion-test, .test-tile .icon--ab-test, .test-tile .icon--split-test, .test-tile .icon--conversion-test, .test-tile .icon--multivariate-test { background-size: 30px 30px !important; font-size: 30px !important; height: 30px !important; width: 30px !important; } .campaign-list-item .cf.push--bottom { margin-bottom: 10px !important } .panel__link { padding: 10px 40px } .campaign-list-item h4 { font-size: 15px !important; color: #3892E3 !important } .test-tile {padding: 10px !important; } .stat-group { margin-top: 3px !important } .test-tile__notification--information { display: none  !important} .test-tile .stat__value {font-size: 13px !important} .vwo-improvement { font-weight: 700; left: auto !important; width: 100% !important; text-align: center !important; } .vwo-improvement-red { color: red } .vwo-improvement-green { color: green } .vwo-improvement-point { font-weight: 400 } </style>";
+	var stylesGeneral = "<style>.summary-message { font-size: 16px; padding: 10px 30px; background: rgba(255,255,255, 0.8); border: 1px solid #ddd; position:absolute; top:-57px; right: 5px; color: red } .float-goals { background : none repeat scroll 0 0 #e7eaef; position: fixed; border-bottom: 1px solid #ddd; z-index: 999; opacity : 0.9; } [title='Show details of Sample report'] { display: none !important } .side-panel-filter h5 { color: #888 !important } .test-tile h4 { color: #3892E3 !important } #js-side-panel .icon--multivariate-test, #js-side-panel .icon--ab-test, #js-side-panel .icon--split-test, #js-side-panel .icon--conversion-test, .test-tile .icon--ab-test, .test-tile .icon--split-test, .test-tile .icon--conversion-test, .test-tile .icon--multivariate-test { background-size: 30px 30px !important; font-size: 30px !important; height: 30px !important; width: 30px !important; } .campaign-list-item .cf.push--bottom { margin-bottom: 10px !important } .panel__link { padding: 10px 40px } .campaign-list-item h4 { font-size: 15px !important; color: #3892E3 !important } .test-tile {padding: 10px !important; } .stat-group { margin-top: 3px !important } .test-tile__notification--information { display: none  !important} .test-tile .stat__value {font-size: 13px !important} .vwo-improvement { font-weight: 700; left: auto !important; right: auto !important; width: 100% !important; text-align: center !important; } .vwo-improvement-red { color: red } .vwo-improvement-green { color: green } .vwo-improvement-point { font-weight: 400 } </style>";
 		$(document.body).append(stylesGeneral);
 	
 	//On first page load
