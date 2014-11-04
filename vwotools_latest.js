@@ -2,11 +2,12 @@
 // @name        VWO Report
 // @namespace   goodui
 // @include     http*://app.vwo.com*
-// @version     1.1.2
+// @version     1.1.3
 // @grant       none
 // ==/UserScript==
 
-//Code License: GPL 2
+// Code License: GPL 2
+// Built using ABStats.js, a statistical framework for A/B testing
 
 function significance_binary(aSuccess, aParticipants, bSuccess, bParticipants) {
 	var P = (aSuccess + bSuccess)/(aParticipants + bParticipants);
@@ -28,6 +29,19 @@ function interval_binary(success, participants, confidencePct) {
 	}
 }
 
+function intervalp_binary(aSuccess, aParticipants, bSuccess, bParticipants, confidencePct) {
+	var confidenceZ = normalAreaPctToZ(confidencePct);
+	var n1Adj = aParticipants + Math.pow(confidenceZ,2)/2;		
+	var p1Adj = (aSuccess + Math.pow(confidenceZ, 2)/4)/n1Adj;		
+	var n2Adj = bParticipants + Math.pow(confidenceZ,2)/2;		
+	var p2Adj = (bSuccess + Math.pow(confidenceZ, 2)/4)/n2Adj;
+	return {
+		upper : Math.ceil(((p2Adj-p1Adj) + confidenceZ * Math.sqrt( p1Adj*(1-p1Adj)/n1Adj + p2Adj*(1-p2Adj)/n2Adj))/p1Adj*10000)/10000,
+		lower : Math.ceil(((p2Adj-p1Adj) - confidenceZ * Math.sqrt( p1Adj*(1-p1Adj)/n1Adj + p2Adj*(1-p2Adj)/n2Adj))/p1Adj*10000)/10000,
+		point : Math.ceil(((p2Adj-p1Adj)/p1Adj*10000))/10000
+	}
+}	
+	
 function normalDist(z) {
 	return Math.pow(Math.E,-Math.pow(z,2)/2)/Math.sqrt(2*Math.PI);
 }
@@ -194,8 +208,8 @@ function initialize() { //on page load and refresh
   
     //Clarify table labels
     var thead = table.children('thead').children('tr').children('th');
-    thead.eq(1).append('<br><strong title="80% Confidence. After correction for multiple comparisons, true confidence is lower" style="font-size: 80%; color:green">&lt; 75% Confidence Range</strong>');
-	thead.eq(3).append('<br><strong style="font-size: 80%; color:green" title="Margin of error with 95% Confidence">95% Confidence Range</strong>');
+    thead.eq(1).append('<br><strong title="75% Confidence Range. After correction for multiple comparisons, true confidence is lower" style="font-size: 80%; color:green">&lt; 75% Confidence Range</strong>');
+	thead.eq(3).append('<br><strong style="font-size: 80%; color:green" title="Margin of error with 99% Confidence">99% Confidence Range</strong>');
     thead.eq(9).append('<br><strong style="font-size: 80%; color:green" title="The sample size that would be required to detect this effect about 85% of the time" style="font-size: 80%; color:green">Sample Size Guide</strong>');
 		var colConfidence = thead.eq(5).children("a").contents();
 		colConfidence.eq(0).replaceWith(document.createTextNode("Actual Confidence"));
@@ -250,7 +264,6 @@ function modifyTable() {
 	var successControl = parseInt(conversionStringControl[0].replace(/\D/g, ''));
 	var visitorsControl = parseInt(conversionStringControl[1].replace(/\D/g, ''));
 	var pControl = successControl/visitorsControl;
-	var confidenceControl = interval_binary(successControl, visitorsControl, 0.95);
 	
 	rows.each(function () {
 		var row = $(this);
@@ -272,9 +285,10 @@ function modifyTable() {
 			var confidenceLevel = Math.floor(normalAreaZtoPct(Math.abs(z)) * 100);
 			var chanceToBeat;
 			var p = Math.floor((1- significance_binary(success, visitors, successControl, visitorsControl))*1000)/1000;
-			var confidenceVariation = interval_binary(success, visitors, 0.95);
-			var improvementMinimum = Math.floor(100*(pVariation > pControl ? ((confidenceVariation.lower - confidenceControl.upper)/confidenceControl.upper) : ((confidenceVariation.upper - confidenceControl.lower)/confidenceControl.lower)));
-			var improvementMaximum = Math.floor(100*(pVariation > pControl ? ((confidenceVariation.upper - confidenceControl.lower)/confidenceControl.lower) : ((confidenceVariation.lower - confidenceControl.upper)/confidenceControl.upper)));
+			var confidenceP = intervalp_binary(successControl, visitorsControl, success, visitors, 0.99);
+			var improvementMinimum = Math.floor(100*(pVariation > pControl ? confidenceP.lower : confidenceP.upper ));
+			var improvementMaximum = Math.floor(100*(pVariation > pControl ? confidenceP.upper : confidenceP.lower ));
+			var improvementPoint = Math.floor(100*confidenceP.point);
 			
 			if(visitors < 10 || success < 10 || visitors-success < 10 || successControl < 10 || visitorsControl-successControl < 10) {
 				chanceToBeat = "<span class='confidence' style='color: grey'><small>Not enough data</small></span>";
@@ -305,9 +319,12 @@ function modifyTable() {
 			}
 			
 			colChanceToBeat.html(chanceToBeat);
+			var improvementMinimumHTML = improvementMinimum < 0 ? "<span class='vwo-improvement-red'>" + improvementMinimum + "</span>" : "<span class='vwo-improvement-green'>" + improvementMinimum + "</span>";
+			var improvementMaximumHTML = improvementMaximum < 0 ? "<span class='vwo-improvement-red'>" + improvementMaximum + "</span>" : "<span class='vwo-improvement-green'>" + improvementMaximum + "</span>";
+			var improvementPointHTML = " <span style='color: #666'>&lt;</span> " + (improvementPoint < 0 ? "<span class='vwo-improvement-red vwo-improvement-point'>" + improvementPoint + "</span>" : "<span class='vwo-improvement-green vwo-improvement-point'>" + improvementPoint + "</span>") + " <span style='color: #666'>&lt;</span> ";
 			if(visitors != 0 && visitorsControl !=0) {
-				if(improvementMinimum < improvementMaximum)	colImprovement.find("span").html((improvementMinimum < 0 ? "<span style='color: red; font-weight: bold'>" + improvementMinimum + "</span>" : "<span style='color: green; font-weight: bold'>" + improvementMinimum + "</span>") + " to " + (improvementMaximum < 0 ? "<span style='color: red; font-weight: bold'>" + improvementMaximum + "</span>" : "<span style='color: green; font-weight: bold'>" + improvementMaximum + "</span>") + "<span style='color: #666'>%</span>");
-				else colImprovement.find("span").html((improvementMaximum < 0 ? "<span style='color: red; font-weight: bold'>" + improvementMaximum + "</span>" : "<span style='color: green; font-weight: bold'>" + improvementMaximum + "</span>") + " to " + (improvementMinimum < 0 ? "<span style='color: red; font-weight: bold'>" + improvementMinimum + "</span>" : "<span style='color: green; font-weight: bold'>" + improvementMinimum + "</span>") + "<span style='color: #666'>%</span>");
+				if(improvementMinimum < improvementMaximum)	colImprovement.find("span").addClass("vwo-improvement").html( improvementMinimumHTML +  improvementPointHTML + improvementMaximumHTML + "<span style='color: #666'>%</span>");
+				else colImprovement.find("span").addClass("vwo-improvement").html(improvementMaximumHTML + improvementPointHTML + improvementMinimumHTML + "<span style='color: #666'>%</span>");
 			}
 				
 			//Insert sample estimates
@@ -347,7 +364,7 @@ function modifyTable() {
 document.body.onload = function() {
 
 	//General changes
-	var stylesGeneral = "<style>.summary-message { font-size: 16px; padding: 10px 30px; background: rgba(255,255,255, 0.8); border: 1px solid #ddd; position:absolute; top:-57px; right: 5px; color: red } .float-goals { background : none repeat scroll 0 0 #e7eaef; position: fixed; border-bottom: 1px solid #ddd; z-index: 999; opacity : 0.9; } [title='Show details of Sample report'] { display: none !important } .side-panel-filter h5 { color: #888 !important } .test-tile h4 { color: #3892E3 !important } #js-side-panel .icon--multivariate-test, #js-side-panel .icon--ab-test, #js-side-panel .icon--split-test, #js-side-panel .icon--conversion-test, .test-tile .icon--ab-test, .test-tile .icon--split-test, .test-tile .icon--conversion-test, .test-tile .icon--multivariate-test { background-size: 30px 30px !important; font-size: 30px !important; height: 30px !important; width: 30px !important; } .campaign-list-item .cf.push--bottom { margin-bottom: 10px !important } .panel__link { padding: 10px 40px } .campaign-list-item h4 { font-size: 15px !important; color: #3892E3 !important } .test-tile {padding: 10px !important; } .stat-group { margin-top: 3px !important } .test-tile__notification--information { display: none  !important} .test-tile .stat__value {font-size: 13px !important} </style>";
+	var stylesGeneral = "<style>.summary-message { font-size: 16px; padding: 10px 30px; background: rgba(255,255,255, 0.8); border: 1px solid #ddd; position:absolute; top:-57px; right: 5px; color: red } .float-goals { background : none repeat scroll 0 0 #e7eaef; position: fixed; border-bottom: 1px solid #ddd; z-index: 999; opacity : 0.9; } [title='Show details of Sample report'] { display: none !important } .side-panel-filter h5 { color: #888 !important } .test-tile h4 { color: #3892E3 !important } #js-side-panel .icon--multivariate-test, #js-side-panel .icon--ab-test, #js-side-panel .icon--split-test, #js-side-panel .icon--conversion-test, .test-tile .icon--ab-test, .test-tile .icon--split-test, .test-tile .icon--conversion-test, .test-tile .icon--multivariate-test { background-size: 30px 30px !important; font-size: 30px !important; height: 30px !important; width: 30px !important; } .campaign-list-item .cf.push--bottom { margin-bottom: 10px !important } .panel__link { padding: 10px 40px } .campaign-list-item h4 { font-size: 15px !important; color: #3892E3 !important } .test-tile {padding: 10px !important; } .stat-group { margin-top: 3px !important } .test-tile__notification--information { display: none  !important} .test-tile .stat__value {font-size: 13px !important} .vwo-improvement { font-weight: 700; left: auto !important; width: 100% !important; text-align: center !important; } .vwo-improvement-red { color: red } .vwo-improvement-green { color: green } .vwo-improvement-point { font-weight: 400 } </style>";
 		$(document.body).append(stylesGeneral);
 	
 	//On first page load
