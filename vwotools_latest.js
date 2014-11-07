@@ -2,7 +2,7 @@
 // @name        VWO Report
 // @namespace   goodui
 // @include     http*://app.vwo.com*
-// @version     1.1.3.1
+// @version     1.1.4
 // @grant       none
 // ==/UserScript==
 
@@ -330,8 +330,9 @@ function modifyTable() {
 			//Insert sample estimates
 			var pctEffect = Math.round(1000*(pVariation-pControl)/pControl)/10;
 			var minimumEffect = pControl - pVariation;
+			var pAvg = (pControl + pVariation)/2;
 			var zTotal = power + alpha;
-			var samplesize = Math.floor(2 * Math.pow(zTotal, 2) * pControl * (1 - pControl) / Math.pow(minimumEffect, 2) + 0.5);
+			var samplesize = Math.floor(2 * Math.pow(zTotal, 2) * pAvg * (1 - pAvg) / Math.pow(minimumEffect, 2) + 0.5);
 			var samplesizeCurrentOfTotal = visitors / samplesize;
 			var samplesizeDifference = ((samplesize-visitors).toString()).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 			//Put together the sample estimate and rating
