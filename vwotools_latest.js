@@ -328,7 +328,8 @@ function modifyTable() {
 			}
 				
 			//Insert sample estimates
-			var pctEffect = Math.round(1000*(pVariation-pControl)/pControl)/10;
+			//MLE point estimate var pctEffect = Math.round(1000*(pVariation-pControl)/pControl)/10;
+			var pctEffect = improvementPoint; // Adjusted Wald point estimate
 			var minimumEffect = pControl - pVariation;
 			var pAvg = (pControl + pVariation)/2;
 			var zTotal = power + alpha;
