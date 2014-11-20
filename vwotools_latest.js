@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        VWO Report
 // @namespace   goodui
-// @include     http*://app.vwo.com*
+// @match     http*://app.vwo.com*
 // @version     1.1.5
 // @grant       none
 // ==/UserScript==
