@@ -2,12 +2,11 @@
 // @name        VWO Report
 // @namespace   goodui
 // @include     http*://app.vwo.com*
-// @version     1.1.5
+// @version     1.1.6
 // @grant       none
 // ==/UserScript==
 
 // Code License: GPL 2
-// Built using ABStats.js, a statistical framework for A/B testing
 
 function significance_binary(aSuccess, aParticipants, bSuccess, bParticipants) {
 	var P = (aSuccess + bSuccess)/(aParticipants + bParticipants);
@@ -357,10 +356,10 @@ function modifyTable() {
 		if(success > 0) {
 			//Add variation to ABBA URL
 			var name = ((cols.eq(0).children('.variation-icon').text()).trim() + ': ' + (cols.eq(0).children('.variation-name').text()).trim()).replace('+', '%2B').replace(/ /g, '+').replace(':', '%3A');
-			if(isControl == false) abbaURL = abbaURL + "&" + name + '=' + success + '%2C' + visitors;
-			else abbaURL = name + '=' + success + '%2C' + visitors + abbaURL;
+			abbaURL = abbaURL + "&" + name + '=' + success + '%2C' + visitors;
 		}
 	});
+	if(abbaURL.substr(0,1) == "&") abbaURL = abbaURL.substr(1);
 	abbaURL = "http://www.thumbtack.com/labs/abba/#" + abbaURL + "&abba%3AintervalConfidenceLevel=0.95&abba%3AuseMultipleTestCorrection=" + (rowCount > 5 ? "false" : "true");
 	abbaLink.children('a').attr('href', abbaURL);
 }
