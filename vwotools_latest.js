@@ -7,6 +7,7 @@
 // ==/UserScript==
 
 // Code License: GPL 2
+// Built using ABStats.js, a statistical framework for A/B testing
 
 function significance_binary(aSuccess, aParticipants, bSuccess, bParticipants) {
 	var P = (aSuccess + bSuccess)/(aParticipants + bParticipants);
@@ -356,7 +357,8 @@ function modifyTable() {
 		if(success > 0) {
 			//Add variation to ABBA URL
 			var name = ((cols.eq(0).children('.variation-icon').text()).trim() + ': ' + (cols.eq(0).children('.variation-name').text()).trim()).replace('+', '%2B').replace(/ /g, '+').replace(':', '%3A');
-			abbaURL = abbaURL + "&" + name + '=' + success + '%2C' + visitors;
+			if(isControl) abbaURL = name + '=' + success + '%2C' + visitors + abbaURL;
+			else abbaURL = abbaURL + "&" + name + '=' + success + '%2C' + visitors;
 		}
 	});
 	if(abbaURL.substr(0,1) == "&") abbaURL = abbaURL.substr(1);
