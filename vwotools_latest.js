@@ -7,6 +7,7 @@
 // ==/UserScript==
 
 // Code License: GPL 2
+// Built using ABStats.js, a statistical framework for A/B testing
 
 function significance_binary(aSuccess, aParticipants, bSuccess, bParticipants) {
 	var P = (aSuccess + bSuccess)/(aParticipants + bParticipants);
@@ -185,13 +186,13 @@ function initialize() { //on page load and refresh
     //Link to ABBA
 	  rowCountActive = rows.not(".table--data__disabled-row").length;
 		var bonferroniMessage = (rowCountActive) > 2 ? '&#x2714; <strong>Bonferroni correction enabled</strong></div>' : '&#x2718; <strong>Bonferroni correction disabled</strong></div>';
-    var abbaHTML = '<div class=\'abbalink\'><a href=\'http://www.thumbtack.com/labs/abba\' target=\'_blank\' id=\'abbaURL\'>View results in ABBA calculator<br><smaller style="font-size: 9pt">' + bonferroniMessage + '</smaller></a>';
-    abbaLink = $(abbaHTML);
-    abbaLink.appendTo(table.parent());
-	  //False positive notice
+		var abbaHTML = '<div class=\'abbalink\'><a href=\'http://www.thumbtack.com/labs/abba\' target=\'_blank\' id=\'abbaURL\'>View results in ABBA calculator<br><smaller style="font-size: 9pt">' + bonferroniMessage + '</smaller></a>';
+		abbaLink = $(abbaHTML);
+		abbaLink.appendTo(table.parent());
+	//False positive notice
 		var pFalse = Math.round((1 - Math.pow(0.95, rowCountActive-1))*100); // probability of at least one false positive
 		var falseriskText = "<strong>Risk of at least one false positive</strong>: " + pFalse + "%";
-	  abbaLink.prepend("<div class='vwo-stats'><div><strong>Number of comparisons</strong>: " + (rowCountActive-1) + "</div><div class='falserisk'>" + falseriskText + "</div><div><strong>Time elapsed</strong>: Less than " + Math.ceil(elapsedWeeks) + " weeks<br><strong>Weekly traffic</strong>: " + trafficWeekly + " visitors</div></div>");
+		abbaLink.prepend("<div class='vwo-stats'><div><strong>Number of comparisons</strong>: " + (rowCountActive-1) + "</div><div class='falserisk'>" + falseriskText + "</div><div><strong>Time elapsed</strong>: Less than " + Math.ceil(elapsedWeeks) + " weeks<br><strong>Weekly traffic</strong>: " + trafficWeekly + " visitors</div></div>");
 	
     //Floating goals
     goals.find('.separator').remove();
@@ -212,9 +213,8 @@ function initialize() { //on page load and refresh
     thead.eq(1).append('<br><strong title="75% Confidence Range. After correction for multiple comparisons, true confidence is lower" style="font-size: 80%; color:green">&lt; 75% Confidence Range</strong>');
 	thead.eq(3).append('<br><strong style="font-size: 80%; color:green" title="Margin of error with 99% Confidence">99% Confidence Range</strong>');
     thead.eq(9).append('<br><strong style="font-size: 80%; color:green" title="The sample size that would be required to detect this effect about 85% of the time" style="font-size: 80%; color:green">Sample Size Guide</strong>');
-		var colConfidence = thead.eq(5).children("a").contents();
-		colConfidence.eq(0).replaceWith(document.createTextNode("Actual Confidence"));
-	  colConfidence.eq(3).remove();		
+		var colConfidence = thead.eq(5).children("a");
+		colConfidence.html(document.createTextNode("Actual Confidence"));
 	
     //Collapse table rows
     $('.variation-name__url').remove();  
@@ -339,7 +339,7 @@ function modifyTable() {
 			var samplesizeDifference = ((samplesize-visitors).toString()).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 			//Put together the sample estimate and rating
 			var samplesizeHTML;
-			var title = "If this " + pctEffect + "% effect is real, you would expect to confirm it with 95% confidence if you had " + samplesizeDifference + " more visitors (" + Math.ceil(elapsedWeeks - Math.floor(elapsedWeeks) + (samplesize-visitors)/(trafficWeekly/rowCountActive)) + " weeks). " + (samplesizeCurrentOfTotal < 0.5 ? " There is an up to 15% chance results will not be conclusive at 0.05 significance level." : " However, results may become less conclusive during this time.");
+			var title = "If the true effect were " + pctEffect + "%, you should test with " + samplesizeDifference + " more visitors than you have now (" + Math.ceil(elapsedWeeks - Math.floor(elapsedWeeks) + (samplesize-visitors)/(trafficWeekly/rowCountActive)) + " weeks). Then you would accept a 5%+ chance of seeing a similar result by chance (false positive) and 15%+ chance of seeing a real effect as inconclusive (false negative).";
 			if(visitors < 10 || success < 10) { samplesizeHTML = "<span data-title='Not enough data' class='samplesize grey' style='font-size: 16px; color: #ccc'>&#10008;</span>"; }
 			else if(samplesize <= visitors && (success < 100 || visitors < 400) && confidenceLevel < 80) { samplesizeHTML = "<span data-title='Likely insufficient sample. Run experiments until you have adequate visitors and at least 100 conversions" + (elapsedWeeks < 2 ? " for 1-2 weeks" : "") + ". The effect size may still be inflated.' class='samplesize green' style='color: green'>&#9685;</style>"; }
 			else if(samplesize <= visitors && (success < 100 || visitors < 400)) { samplesizeHTML = "<span data-title='This is a sufficient sample size to see that there is an effect, but the degree of effect may be inflated. " + (elapsedWeeks < 2 ? "Run this variation for 2 weeks or more to ensure it holds." : "") + " Get at the very least " + (100 - success) + " more conversions.' class='samplesize green' style='color: green'>&#9685;</style>"; }			
