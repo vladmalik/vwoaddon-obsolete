@@ -2,7 +2,7 @@
 // @name        VWO Report
 // @namespace   goodui
 // @include     http*://app.vwo.com*
-// @version     1.1.6
+// @version     1.1.7
 // @grant       none
 // ==/UserScript==
 
@@ -173,7 +173,7 @@ function initialize() { //on page load and refresh
     
     //Refresh references
     refreshTableReferences();
-    goals = $('.view--campaign').children('div').children('div').eq(1).children('ul'); //side menu
+    goals = $('.view--campaign').find(".graph-legend"); //side menu
 	
 		//Test duration
 		elapsedWeeks = elapsed(time);
