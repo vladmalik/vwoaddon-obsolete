@@ -9,6 +9,8 @@
 // Code License: GPL 2
 // Built using ABStats.js, a statistical framework for A/B testing
 
+// THIS TOOL IS OBSOLETE WITH THE NEW VWO
+
 function significance_binary(aSuccess, aParticipants, bSuccess, bParticipants) {
 	var P = (aSuccess + bSuccess)/(aParticipants + bParticipants);
 	var Q = 1-P;
